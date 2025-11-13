@@ -1,0 +1,7 @@
+engines:
+  eslint:
+    enabled: true
+    config: .eslintrc.json
+exclude_paths:
+  - coverage/**
+  - node_modules/**

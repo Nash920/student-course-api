@@ -1,35 +1,42 @@
-const express=require('express');
-const swaggerUi=require('swagger-ui-express');
+const express = require('express');
+const swaggerUi = require('swagger-ui-express');
 
-const x=require('./routes/students');	const y=require('./routes/courses');
-
-const z=require('../swagger.json');		const app=express();	app.use(express.json());
-
-const swaggerJSDoc = require('swagger-jsdoc');
-const swaggerDefinition = require('../swaggerDef');
-
-const options = {
-  swaggerDefinition,
-  apis: ['./src/controllers/*.js'], // Chemin vers les fichiers avec les commentaires JSDoc
-};
-
-const swaggerSpec = swaggerJSDoc(options);
-app.use('/api-docs',swaggerUi.serve,swaggerUi.setup(z));
-
-//app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
+const studentsRouter = require('./routes/students');
+const coursesRouter = require('./routes/courses');
+const swaggerDocument = require('../swagger.json');
 const storage = require('./services/storage');
 
-storage.seed(); 
+const app = express();
 
-app.use('/students',x);	app.use('/courses',y);
+app.use(express.json());
 
-app.use((req,res)=>{res.status(404).json({error:'Not Found'});});
+// Seed des données au démarrage
+storage.seed();
 
-app.use((err,req,res,next)=>{console.error(err.stack);res.status(500).json({error:'Internal Server Error'});});
+// Swagger UI (à partir de swagger.json)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-if(require.main===module){
-const p=process.env.PORT||3000;	app.listen(p,()=>{console.log(`Server listening on port ${p}`);});
+// Routes principales
+app.use('/students', studentsRouter);
+app.use('/courses', coursesRouter);
+
+// 404
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+
+// Middleware d'erreur
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+if (require.main === module) {
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+  });
 }
 
-module.exports=app;
+module.exports = app;

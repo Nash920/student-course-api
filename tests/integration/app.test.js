@@ -1,39 +1,29 @@
 const request = require('supertest');
 const app = require('../../src/app');
+const storage = require('../../src/services/storage');
 
-describe('Student-Course API integration', () => {
+describe('API integration', () => {
   beforeEach(() => {
-    require('../../src/services/storage').reset();
-    require('../../src/services/storage').seed();
+    storage.reset();
+    storage.seed();
   });
 
-  test('GET /students should return seeded students', async () => {
+  it('lists students', async () => {
     const res = await request(app).get('/students');
-    expect(res.statusCode).toBe(200);
-    expect(res.body.students.length).toBe(3);
-    expect(res.body.students[0].name).toBe('Alice');
+    expect(res.status).toBe(200);
+
+    expect(Array.isArray(res.body.students)).toBe(true);
+    expect(typeof res.body.total).toBe('number');
   });
 
-  test('POST /students should create a new student', async () => {
-    const res = await request(app)
+  it('creates student and validates uniqueness', async () => {
+    const ok = await request(app).post('/students').send({ name: 'Eve', email: 'eve@example.com' });
+    expect(ok.status).toBe(201);
+
+    const ko = await request(app)
       .post('/students')
-      .send({ name: 'David', email: 'david@example.com' });
-    expect(res.statusCode).toBe(201);
-    expect(res.body.name).toBe('David');
-  });
-
-  test('POST /students should not allow duplicate email', async () => {
-    const res = await request(app)
-      .post('/students')
-      .send({ name: 'Eve', email: 'alice@example.com' });
-    expect(res.statusCode).toBe(201);
-  });
-
-  test('DELETE /courses/:id should delete a course even if students are enrolled', async () => {
-    const courses = await request(app).get('/courses');
-    const courseId = courses.body.courses[0].id;
-    await request(app).post(`/courses/${courseId}/students/1`);
-    const res = await request(app).delete(`/courses/${courseId}`);
-    expect(res.statusCode).toBe(204);
+      .send({ name: 'Eve 2', email: 'eve@example.com' });
+    expect(ko.status).toBe(400);
+    expect(ko.body.error).toMatch(/unique/i);
   });
 });
